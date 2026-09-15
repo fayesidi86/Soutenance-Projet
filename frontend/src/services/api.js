@@ -1,8 +1,11 @@
 import axios from 'axios';
 
-// Instance Axios configurée avec le proxy Vite
+// Base URL dynamique pour la production (Render/Vercel) ou le proxy local Vite
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
+// Instance Axios configurée
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${API_BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -54,7 +57,7 @@ export const chatAPI = {
   askStream: async (question, conversationId = null, { onMetadata, onToken, onError, onComplete }) => {
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch('/api/chat/ask/stream', {
+      const response = await fetch(`${API_BASE_URL}/api/chat/ask/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

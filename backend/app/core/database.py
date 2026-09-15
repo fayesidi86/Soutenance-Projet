@@ -2,8 +2,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 
-# Conversion propre de l'URL pour éviter les problèmes d'encodage Windows / Psycopg2
+# Conversion propre de l'URL pour Render / Neon / Supabase et encodage UTF-8
 db_url = str(settings.DATABASE_URL)
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(
     db_url,

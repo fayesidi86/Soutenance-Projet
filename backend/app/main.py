@@ -1,5 +1,4 @@
-"""Point d'entrée de l'application FastAPI AssistantJuridique MALI."""
-
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,11 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api import admin, auth, chat
+from app.core.config import settings
 from app.core.database import Base, engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialise l'extension pgvector et crée les tables au démarrage."""
+    """Initialise l'extension pgvector, crée les dossiers requis et initialise l'admin."""
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     with engine.connect() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         conn.commit()
@@ -63,10 +64,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configuration CORS
+# Configuration CORS (Support local et déploiement Vercel)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

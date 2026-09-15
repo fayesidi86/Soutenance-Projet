@@ -77,6 +77,7 @@ export const chatAPI = {
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
+      let completeCalled = false; // Garde pour éviter le double appel de onComplete
 
       while (true) {
         const { done, value } = await reader.read();
@@ -97,7 +98,10 @@ export const chatAPI = {
               } else if (parsed.type === 'token') {
                 if (onToken) onToken(parsed.text);
               } else if (parsed.type === 'done') {
-                if (onComplete) onComplete();
+                if (onComplete && !completeCalled) {
+                  completeCalled = true;
+                  onComplete();
+                }
               }
             } catch (e) {
               console.error('SSE parse error:', e);
@@ -105,7 +109,10 @@ export const chatAPI = {
           }
         }
       }
-      if (onComplete) onComplete();
+      // Appel de secours si le serveur n'a pas envoyé l'événement 'done'
+      if (onComplete && !completeCalled) {
+        onComplete();
+      }
     } catch (err) {
       if (onError) onError(err.message || 'Une erreur est survenue.');
     }

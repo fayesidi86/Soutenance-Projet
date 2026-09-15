@@ -284,9 +284,20 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
                               ol: ({children}) => <ol className="list-decimal list-inside mb-2 space-y-0.5 pl-1">{children}</ol>,
                               li: ({children}) => <li className="text-surface-200 leading-relaxed">{children}</li>,
                               blockquote: ({children}) => <blockquote className="border-l-2 border-mali-green/50 pl-3 my-2 text-surface-300 italic">{children}</blockquote>,
-                              code: ({inline, children}) => inline
-                                ? <code className="bg-surface-700/60 text-mali-gold px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
-                                : <pre className="bg-surface-800/80 border border-surface-700/30 rounded-lg p-3 my-2 overflow-x-auto"><code className="text-xs font-mono text-surface-200">{children}</code></pre>,
+                              // react-markdown v10 : séparer pre (bloc) et code (inline)
+                              pre: ({children}) => (
+                                <pre className="bg-surface-800/80 border border-surface-700/30 rounded-lg p-3 my-2 overflow-x-auto">
+                                  {children}
+                                </pre>
+                              ),
+                              code: ({className, children}) => {
+                                // Si className contient 'language-*', c'est un code bloc (rendu dans <pre>)
+                                if (className) {
+                                  return <code className="text-xs font-mono text-surface-200">{children}</code>;
+                                }
+                                // Sinon c'est du code inline
+                                return <code className="bg-surface-700/60 text-mali-gold px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>;
+                              },
                               a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-mali-green underline underline-offset-2 hover:text-mali-green-light transition-colors">{children}</a>,
                               hr: () => <hr className="border-surface-700/40 my-3" />,
                               table: ({children}) => <div className="overflow-x-auto my-2"><table className="text-xs border-collapse w-full">{children}</table></div>,

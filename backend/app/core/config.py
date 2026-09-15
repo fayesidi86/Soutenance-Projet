@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     GEMINI_API_KEY: str = ""
-    EMBEDDING_MODEL: str = "models/text-embedding-004"
-    LLM_MODEL: str = "gemini-2.0-flash"
+    EMBEDDING_MODEL: str = "gemini-embedding-001"
+    LLM_MODEL: str = "gemini-3.6-flash"
     UPLOAD_DIR: str = "uploads"
 
     model_config = SettingsConfigDict(

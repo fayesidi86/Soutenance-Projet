@@ -17,7 +17,7 @@ Le backend est propulsé par **FastAPI** pour l'API REST, **SQLAlchemy** pour l'
        ▼
 [Routeur FastAPI (chat.py)] ────(2. Vectorise la question)────► [Service RAG (generate_embedding)]
        │                                                                      │
-       │                                                      (3. Requête text-embedding-004)
+       │                                                      (3. Requête gemini-embedding-001)
        │                                                                      ▼
        │                                                            [API Google Gemini]
        │                                                                      │
@@ -37,7 +37,7 @@ Le backend est propulsé par **FastAPI** pour l'API REST, **SQLAlchemy** pour l'
        │
        │ (8. Génération de la réponse finale)
        ▼
-[API Google Gemini (gemini-1.5-flash)]
+[API Google Gemini (gemini-3.6-flash)]
        │
        │ (9. Réponse rédigée + citations)
        ▼
@@ -90,8 +90,8 @@ Ce module utilise la bibliothèque `pydantic-settings` pour définir, valider et
 * **`DATABASE_URL`** : L'URL de connexion PostgreSQL (contient l'utilisateur, le mot de passe, l'hôte et le nom de la BDD).
 * **`SECRET_KEY` & `ALGORITHM`** : Utilisés pour signer de manière sécurisée les jetons JWT.
 * **`GEMINI_API_KEY`** : La clé secrète requise pour communiquer avec l'API Google Gemini.
-* **`EMBEDDING_MODEL`** : Modèle d'embeddings utilisé (`models/text-embedding-004`), produisant des vecteurs de dimension **768**.
-* **`LLM_MODEL`** : Modèle de langage utilisé (`gemini-1.5-flash`) pour formuler les réponses.
+* **`EMBEDDING_MODEL`** : Modèle d'embeddings utilisé (`gemini-embedding-001`), produisant des vecteurs de dimension **768**.
+* **`LLM_MODEL`** : Modèle de langage utilisé (`gemini-3.6-flash`) pour formuler les réponses.
 * **`UPLOAD_DIR`** : Le dossier local dans lequel sont stockés les fichiers PDF importés.
 
 ### 2. Base de données PostgreSQL (`core/database.py`)
@@ -144,8 +144,8 @@ La pertinence des réponses du modèle dépend fortement de la qualité du déco
 Ce service pilote l'interaction avec l'API Google Gemini et le stockage vectoriel de pgvector.
 
 * **`generate_embedding(content)`** :
-  Envoie le texte brut au modèle `text-embedding-004` de Google Gemini pour générer une représentation vectorielle sous forme de liste de 768 dimensions.
-  > **Important :** Le service gère l'exception `ResourceExhausted` au cas où la clé d'API atteint sa limite de quota gratuit, en levant une erreur `503` avec un message clair incitant l'utilisateur à patienter ou à changer son plan de facturation.
+  Envoie le texte brut au modèle `gemini-embedding-001` de Google Gemini (SDK unifié `google-genai`) avec `output_dimensionality=768` pour générer une représentation vectorielle sous forme de liste de 768 dimensions.
+  > **Important :** Le service gère l'exception de quota au cas où la clé d'API atteint sa limite de quota gratuit, en levant une erreur `503` avec un message clair incitant l'utilisateur à patienter.
 
 * **`store_chunk_with_embedding`** :
   Fait le lien en appelant `generate_embedding` pour un fragment puis en le persistant dans `document_chunks` de la BDD.

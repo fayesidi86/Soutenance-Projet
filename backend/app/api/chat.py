@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from app.api.auth import get_current_user
 from app.models.models import Conversation, Message, User
 from app.services.rag_service import (
@@ -142,18 +142,17 @@ def ask_question(
     )
     db.add(user_msg)
 
-    # 4. Récupération de l'historique récent de la conversation (avant la question actuelle)
+    # 4. Récupération de l'historique récent (messages AVANT la question actuelle)
     previous_messages = (
         db.query(Message)
         .filter(Message.conversation_id == conversation.id)
         .order_by(Message.created_at.asc())
         .all()
     )
-    # Construire l'historique sous forme de dicts simples (sans la question actuelle)
+    # Construire l'historique sous forme de dicts simples
     history = [
         {"role": msg.role, "content": msg.content}
         for msg in previous_messages
-        if msg.content != data.question  # Exclure la question qu'on vient d'ajouter
     ]
 
     # 5. Recherche des chunks similaires via pgvector
@@ -287,7 +286,7 @@ def ask_question_stream(
     history = [
         {"role": msg.role, "content": msg.content}
         for msg in previous_messages
-        if msg.content != data.question
+        if msg.id != user_msg.id  # Exclure uniquement le message courant (par ID)
     ]
 
     # 5. Recherche vectorielle
@@ -325,21 +324,25 @@ def ask_question_stream(
             payload = json.dumps({"type": "token", "text": chunk_text})
             yield f"data: {payload}\n\n"
 
-        # Sauvegarder la réponse complète
+        # Sauvegarder la réponse complète via une session indépendante
         try:
             has_legal_citation = any(
                 kw in full_answer.lower() for kw in ["article", "code", "loi", "constitution", "décret", "ordonnance", "chapitre", "titre"]
             )
             final_sources = sources_data if has_legal_citation and not is_greeting_query else []
 
-            assistant_msg = Message(
-                conversation_id=conversation.id,
-                role="assistant",
-                content=full_answer,
-                sources=final_sources,
-            )
-            db.add(assistant_msg)
-            db.commit()
+            save_db = SessionLocal()
+            try:
+                assistant_msg = Message(
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=full_answer,
+                    sources=final_sources,
+                )
+                save_db.add(assistant_msg)
+                save_db.commit()
+            finally:
+                save_db.close()
         except Exception as e:
             print(f"Error saving assistant message: {e}")
 

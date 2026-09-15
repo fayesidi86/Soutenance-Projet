@@ -38,7 +38,7 @@
 **Flux RAG :**
 1. L'admin uploade un PDF de loi malienne
 2. Le PDF est découpé en chunks (par articles)
-3. Chaque chunk est vectorisé via `text-embedding-004`
+3. Chaque chunk est vectorisé via `gemini-embedding-001` (768 dimensions)
 4. L'utilisateur pose une question
 5. Les 4 chunks les plus pertinents sont récupérés (distance cosinus)
 6. Gemini génère une réponse basée **exclusivement** sur ces textes, avec citations
@@ -135,8 +135,8 @@ Le frontend sera accessible sur **http://localhost:5173**.
 | `DATABASE_URL` | URL de connexion PostgreSQL | `postgresql://postgres:postgres@localhost:5432/assistant_juridique` |
 | `SECRET_KEY` | Clé secrète pour les tokens JWT | Changez-la ! |
 | `GEMINI_API_KEY` | Clé API Google Gemini | **(obligatoire)** |
-| `LLM_MODEL` | Modèle Gemini pour le chat | `gemini-1.5-flash` |
-| `EMBEDDING_MODEL` | Modèle d'embeddings | `models/text-embedding-004` |
+| `LLM_MODEL` | Modèle Gemini pour le chat | `gemini-3.6-flash` |
+| `EMBEDDING_MODEL` | Modèle d'embeddings | `gemini-embedding-001` |
 
 ---
 
@@ -230,9 +230,9 @@ AssistantJuridique_MALI/
 
 | Composant | Technologies |
 |-----------|-------------|
-| **Backend** | FastAPI, SQLAlchemy, PostgreSQL, pgvector, Google Gemini |
+| **Backend** | FastAPI, SQLAlchemy, PostgreSQL, pgvector, Google GenAI SDK |
 | **Frontend** | React 18, Vite 5, Tailwind CSS 3, Lucide Icons |
-| **IA** | Gemini 1.5 Flash (LLM), text-embedding-004 (Embeddings) |
+| **IA** | Gemini 3.6 Flash (LLM), gemini-embedding-001 (Embeddings 768d) |
 | **Auth** | JWT (python-jose), bcrypt (passlib) |
 
 ---

@@ -1,5 +1,7 @@
 """Point d'entrée de l'application FastAPI AssistantJuridique MALI."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -7,32 +9,8 @@ from sqlalchemy import text
 from app.api import admin, auth, chat
 from app.core.database import Base, engine
 
-app = FastAPI(
-    title="AssistantJuridique MALI",
-    description=(
-        "API pour l'assistant juridique intelligent "
-        "basé sur les textes de loi du Mali"
-    ),
-    version="1.0.0",
-)
-
-# Configuration CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Inclusion des routers
-app.include_router(auth.router)
-app.include_router(chat.router)
-app.include_router(admin.router)
-
-
-@app.on_event("startup")
-def on_startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """Initialise l'extension pgvector et crée les tables au démarrage."""
     with engine.connect() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
@@ -71,6 +49,34 @@ def on_startup():
         print(f"Erreur lors de la création de l'administrateur : {e}")
     finally:
         db.close()
+
+    yield  # L'application tourne ici
+
+
+app = FastAPI(
+    title="AssistantJuridique MALI",
+    description=(
+        "API pour l'assistant juridique intelligent "
+        "basé sur les textes de loi du Mali"
+    ),
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# Configuration CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Inclusion des routers
+app.include_router(auth.router)
+app.include_router(chat.router)
+app.include_router(admin.router)
+
 
 
 @app.get("/")

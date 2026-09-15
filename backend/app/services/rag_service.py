@@ -2,17 +2,17 @@ import re
 import unicodedata
 from typing import Dict, List, Optional
 
-import google.generativeai as genai
+from google import genai
+from google.genai import errors as genai_errors, types
 from fastapi import HTTPException
-from google.api_core.exceptions import ResourceExhausted
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.models import DocumentChunk
 
-# Configuration de l'API Gemini
-genai.configure(api_key=settings.GEMINI_API_KEY)
+# Initialisation du client Gemini (nouveau SDK google-genai)
+client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 
 QUOTA_ERROR_MSG = (
@@ -50,7 +50,7 @@ COURTESY_TOKENS = {
     "comment", "vas", "tu", "vastu", "allez", "vous", "allezvous", "ca", "va",
     "et", "moi", "bien", "merci", "la", "sante", "famille", "bot", "assistant",
     "lassistant", "tout", "le", "monde", "a", "tous", "cher", "est", "ce", "que",
-    "i", "ni", "sogoma", "tile", "wula", "su", "aw", "baara", "ce", "bisimila", "anba", "ko", "kassama",
+    "i", "ni", "sogoma", "tile", "wula", "su", "aw", "baara", "bisimila", "anba", "ko", "kassama",
     "qui", "es", "etes", "nom", "role", "cree", "aide", "aidemoi", "aidezmoi", "besoin", "daide",
     "que", "peux", "peuxtu", "pouvez", "faire", "quelles", "sont", "tes", "vos", "capacites",
     "fonctions", "au", "revoir", "a", "bientot", "adieu", "bonne", "journee", "soiree", "nuit",
@@ -115,16 +115,21 @@ def is_fast_greeting(query: str) -> Optional[str]:
 def generate_embedding(content: str) -> List[float]:
     """Génère un vecteur d'embedding pour un texte donné via Gemini."""
     try:
-        result = genai.embed_content(
+        response = client.models.embed_content(
             model=settings.EMBEDDING_MODEL,
-            content=content,
-            output_dimensionality=768,
+            contents=content,
+            config=types.EmbedContentConfig(output_dimensionality=768),
         )
-        return result["embedding"]
-    except ResourceExhausted:
+        return response.embeddings[0].values
+    except genai_errors.APIError as e:
+        if "quota" in str(e).lower() or "429" in str(e):
+            raise HTTPException(
+                status_code=503,
+                detail=QUOTA_ERROR_MSG,
+            )
         raise HTTPException(
             status_code=503,
-            detail=QUOTA_ERROR_MSG,
+            detail=f"Erreur API Gemini : {str(e)}",
         )
 
 
@@ -211,14 +216,18 @@ INSTRUCTIONS DE RÉPONSE :
   2. Indique ensuite poliment que la base documentaire ne contient pas actuellement de texte de loi correspondant, et invite l'utilisateur (ou l'administrateur) à ajouter le document PDF sur la page Administration.
 """
         try:
-            model = genai.GenerativeModel(settings.LLM_MODEL)
-            response = model.generate_content(prompt_no_context)
-            return response.text
-        except ResourceExhausted:
-            raise HTTPException(
-                status_code=503,
-                detail=QUOTA_ERROR_MSG,
+            response = client.models.generate_content(
+                model=settings.LLM_MODEL,
+                contents=prompt_no_context,
             )
+            return response.text
+        except genai_errors.APIError as e:
+            if "quota" in str(e).lower() or "429" in str(e):
+                raise HTTPException(
+                    status_code=503,
+                    detail=QUOTA_ERROR_MSG,
+                )
+            raise
         except Exception:
             return (
                 "Je n'ai trouvé aucun texte de loi pertinent dans ma base de données "
@@ -288,14 +297,18 @@ QUESTION ACTUELLE DE L'UTILISATEUR :
 RÉPONSE (Commence TOUJOURS par la Définition claire de la notion AVANT de donner une quelconque loi) :"""
 
     try:
-        model = genai.GenerativeModel(settings.LLM_MODEL)
-        response = model.generate_content(prompt)
-        return response.text
-    except ResourceExhausted:
-        raise HTTPException(
-            status_code=503,
-            detail=QUOTA_ERROR_MSG,
+        response = client.models.generate_content(
+            model=settings.LLM_MODEL,
+            contents=prompt,
         )
+        return response.text
+    except genai_errors.APIError as e:
+        if "quota" in str(e).lower() or "429" in str(e):
+            raise HTTPException(
+                status_code=503,
+                detail=QUOTA_ERROR_MSG,
+            )
+        raise
 
 
 def generate_legal_response_stream(
@@ -324,8 +337,10 @@ INSTRUCTIONS DE RÉPONSE :
   2. Indique ensuite poliment que la base documentaire ne contient pas actuellement de texte de loi correspondant, et invite l'utilisateur (ou l'administrateur) à ajouter le document PDF sur la page Administration.
 """
         try:
-            model = genai.GenerativeModel(settings.LLM_MODEL)
-            response = model.generate_content_stream(prompt_no_context)
+            response = client.models.generate_content_stream(
+                model=settings.LLM_MODEL,
+                contents=prompt_no_context,
+            )
             for chunk in response:
                 try:
                     if chunk.text:
@@ -333,11 +348,15 @@ INSTRUCTIONS DE RÉPONSE :
                 except Exception:
                     pass
             return
-        except ResourceExhausted:
-            raise HTTPException(
-                status_code=503,
-                detail=QUOTA_ERROR_MSG,
-            )
+        except genai_errors.APIError as e:
+            if "quota" in str(e).lower() or "429" in str(e):
+                yield (
+                    "\u26a0\ufe0f Le service d'IA est temporairement indisponible : votre quota journalier "
+                    "de l'API Gemini est \u00e9puis\u00e9. Veuillez r\u00e9essayer demain."
+                )
+                return
+            yield f"\u26a0\ufe0f Erreur API : {str(e)}"
+            return
         except Exception:
             yield (
                 "Je n'ai trouvé aucun texte de loi pertinent dans ma base de données "
@@ -407,18 +426,24 @@ QUESTION ACTUELLE DE L'UTILISATEUR :
 RÉPONSE (Commence TOUJOURS par la Définition claire de la notion AVANT de donner une quelconque loi) :"""
 
     try:
-        model = genai.GenerativeModel(settings.LLM_MODEL)
-        response = model.generate_content_stream(prompt)
+        response = client.models.generate_content_stream(
+            model=settings.LLM_MODEL,
+            contents=prompt,
+        )
         for chunk in response:
             try:
                 if chunk.text:
                     yield chunk.text
             except Exception:
                 pass
-    except ResourceExhausted:
-        raise HTTPException(
-            status_code=503,
-            detail=QUOTA_ERROR_MSG,
-        )
+    except genai_errors.APIError as e:
+        if "quota" in str(e).lower() or "429" in str(e):
+            yield (
+                "\u26a0\ufe0f Le service d'IA est temporairement indisponible : votre quota journalier "
+                "de l'API Gemini est \u00e9puis\u00e9. Veuillez r\u00e9essayer demain."
+            )
+            return
+        yield f"\u26a0\ufe0f Erreur API : {str(e)}"
+        return
 
 

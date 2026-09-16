@@ -13,6 +13,7 @@
   - [2. Backend FastAPI](#2-backend-fastapi)
   - [3. Frontend React/Vite](#3-frontend-reactvite)
 - [Configuration](#configuration)
+- [Déploiement (Render & Vercel)](#-déploiement-en-production)
 - [Utilisation](#utilisation)
 - [Structure du projet](#structure-du-projet)
 
@@ -137,6 +138,31 @@ Le frontend sera accessible sur **http://localhost:5173**.
 | `GEMINI_API_KEY` | Clé API Google Gemini | **(obligatoire)** |
 | `LLM_MODEL` | Modèle Gemini pour le chat | `gemini-3.6-flash` |
 | `EMBEDDING_MODEL` | Modèle d'embeddings | `gemini-embedding-001` |
+
+---
+
+## 🌐 Déploiement en Production
+
+### 1. Backend sur Render (https://render.com)
+1. Créez une base de données **PostgreSQL** sur Render (ou Neon/Supabase).
+2. Créez un **Web Service** connecté à votre dépôt GitHub :
+   - **Root Directory** : `backend`
+   - **Runtime** : `Python 3`
+   - **Build Command** : `pip install -r requirements.txt`
+   - **Start Command** : `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+3. Ajoutez les variables d'environnement (`DATABASE_URL`, `GEMINI_API_KEY`, `SECRET_KEY`, `EMBEDDING_MODEL`, `LLM_MODEL`).
+4. Notez l'URL publique générée (ex: `https://votre-backend.onrender.com`).
+
+### 2. Frontend sur Vercel (https://vercel.com)
+1. Importez votre dépôt GitHub sur Vercel.
+2. Dans la configuration du projet :
+   - **Framework Preset** : `Vite`
+   - **Root Directory** : `frontend`
+   - **Build Command** : `npm run build`
+   - **Output Directory** : `dist`
+3. Dans **Environment Variables**, ajoutez :
+   - `VITE_API_URL` = `https://votre-backend.onrender.com` *(l'URL Render sans slash à la fin)*
+4. Cliquez sur **Deploy**.
 
 ---
 

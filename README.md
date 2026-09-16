@@ -142,6 +142,13 @@ Le frontend sera accessible sur **http://localhost:5173**.
 | `LLM_MODEL` | Modèle Gemini pour le chat | `gemini-3.6-flash` |
 | `EMBEDDING_MODEL` | Modèle d'embeddings | `gemini-embedding-001` |
 | `GOOGLE_CLIENT_ID` | Client ID Google OAuth (vérification des comptes Google) | *(optionnel pour Google Sign-In)* |
+| `EMAIL_NOTIFICATIONS_ENABLED` | Activer/Désactiver les alertes de connexion par email | `True` |
+| `ADMIN_NOTIFICATION_EMAIL` | Adresse email recevant les alertes de connexion | `fayesidi86@gmail.com` |
+| `SMTP_HOST` | Serveur SMTP | `smtp.gmail.com` |
+| `SMTP_PORT` | Port SMTP (TLS) | `587` |
+| `SMTP_USER` | Email de l'expéditeur | `votre-email@gmail.com` |
+| `SMTP_PASSWORD` | Mot de passe d'application SMTP | *(Mot de passe d'application Google)* |
+| `SMTP_FROM_EMAIL` | Adresse d'expédition affichée | `votre-email@gmail.com` |
 
 ### Frontend (`frontend/.env` ou Vercel)
 
@@ -149,6 +156,21 @@ Le frontend sera accessible sur **http://localhost:5173**.
 |----------|-------------|---------|
 | `VITE_API_URL` | URL de l'API backend en production | `https://votre-backend.onrender.com` |
 | `VITE_GOOGLE_CLIENT_ID` | Client ID Google OAuth pour le bouton Google | `xxxxxxxxxx.apps.googleusercontent.com` |
+
+---
+
+### 📧 Comment configurer les Notifications Email avec Gmail (Gratuit) :
+1. Activez la **Validation en deux étapes** sur votre compte Google : [Sécurité du compte Google](https://myaccount.google.com/security).
+2. Rendez-vous sur la page des **Mots de passe d'application** : [Google App Passwords](https://myaccount.google.com/apppasswords).
+3. Créez un mot de passe d'application (nommé par exemple `Assistant Juridique`).
+4. Google génère un mot de passe sécurisé de 16 caractères (ex: `abcd efgh ijkl mnop`).
+5. Renseignez dans votre fichier `backend/.env` (et sur Render) :
+   ```ini
+   SMTP_USER=votre-email@gmail.com
+   SMTP_PASSWORD=abcdefghijklmnop
+   SMTP_FROM_EMAIL=votre-email@gmail.com
+   ADMIN_NOTIFICATION_EMAIL=fayesidi86@gmail.com
+   ```
 
 ---
 

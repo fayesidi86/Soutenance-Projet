@@ -20,3 +20,19 @@ services:
         value: gemini-3.6-flash
       - key: UPLOAD_DIR
         value: uploads
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: EMAIL_NOTIFICATIONS_ENABLED
+        value: "True"
+      - key: ADMIN_NOTIFICATION_EMAIL
+        value: fayesidi86@gmail.com
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false

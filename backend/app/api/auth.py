@@ -1,6 +1,6 @@
 import secrets
 import requests
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
@@ -16,6 +16,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.models import User
+from app.services.email_service import send_login_notification
 
 router = APIRouter(prefix="/api/auth", tags=["Authentification"])
 security_scheme = HTTPBearer()
@@ -100,7 +101,12 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
 
 
 @router.post("/register", response_model=TokenResponse)
-def register(data: RegisterRequest, db: Session = Depends(get_db)):
+def register(
+    data: RegisterRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """Inscription d'un nouvel utilisateur."""
     # Nettoyage et normalisation de l'email
     email = data.email.strip().lower()
@@ -143,6 +149,18 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
+        # Envoi de la notification de nouvelle inscription / connexion
+        client_ip = request.client.host if request.client else "Inconnue"
+        user_agent = request.headers.get("user-agent", "Inconnu")
+        background_tasks.add_task(
+            send_login_notification,
+            user_email=user.email,
+            user_name=user.full_name,
+            login_method="Nouvelle inscription (Email/Mot de passe)",
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+
         token = create_access_token(data={"sub": str(user.id)})
         return TokenResponse(
             access_token=token,
@@ -165,7 +183,12 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(data: LoginRequest, db: Session = Depends(get_db)):
+def login(
+    data: LoginRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """Connexion d'un utilisateur existant."""
     email = data.email.strip().lower()
     password = data.password
@@ -197,6 +220,18 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Email ou mot de passe incorrect.",
             )
+
+        # Envoi de la notification de connexion en arrière-plan
+        client_ip = request.client.host if request.client else "Inconnue"
+        user_agent = request.headers.get("user-agent", "Inconnu")
+        background_tasks.add_task(
+            send_login_notification,
+            user_email=user.email,
+            user_name=user.full_name,
+            login_method="Connexion standard (Email/Mot de passe)",
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
 
         token = create_access_token(data={"sub": str(user.id)})
         return TokenResponse(
@@ -279,7 +314,12 @@ def _verify_google_token(credential: str) -> dict:
 
 
 @router.post("/google", response_model=TokenResponse)
-def login_with_google(data: GoogleLoginRequest, db: Session = Depends(get_db)):
+def login_with_google(
+    data: GoogleLoginRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """
     Authentification ou Inscription directe avec un compte Google vérifié.
     Vérifie le token auprès de Google, crée le compte si inexistant et retourne le JWT de session.
@@ -318,12 +358,26 @@ def login_with_google(data: GoogleLoginRequest, db: Session = Depends(get_db)):
             db.add(user)
             db.commit()
             db.refresh(user)
+            login_method = "Connexion Google (Premier accès / Inscription)"
         else:
             if not user.is_active:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Votre compte a été suspendu. Veuillez contacter un administrateur.",
                 )
+            login_method = "Connexion Google (OAuth)"
+
+        # Envoi de la notification de connexion Google en arrière-plan
+        client_ip = request.client.host if request.client else "Inconnue"
+        user_agent = request.headers.get("user-agent", "Inconnu")
+        background_tasks.add_task(
+            send_login_notification,
+            user_email=user.email,
+            user_name=user.full_name,
+            login_method=login_method,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
 
         token = create_access_token(data={"sub": str(user.id)})
         return TokenResponse(

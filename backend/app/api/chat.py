@@ -267,7 +267,15 @@ def ask_question_stream(
             done = json.dumps({"type": "done"})
             yield f"data: {done}\n\n"
 
-        return StreamingResponse(fast_stream(), media_type="text/event-stream")
+        return StreamingResponse(
+            fast_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     # 3. Message utilisateur
     user_msg = Message(
@@ -349,7 +357,15 @@ def ask_question_stream(
         done = json.dumps({"type": "done"})
         yield f"data: {done}\n\n"
 
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 

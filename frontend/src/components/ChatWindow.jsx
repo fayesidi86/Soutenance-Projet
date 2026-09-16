@@ -66,14 +66,18 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
     setIsLoading(true);
 
     let isNewConversation = (activeConversationId === null);
+    let assignedConversationId = activeConversationId;
 
     await chatAPI.askStream(question, activeConversationId, {
       onMetadata: (metadata) => {
-        if (isNewConversation && metadata.conversation_id) {
-          skipHistoryFetchRef.current = true;
-          setActiveConversationId(metadata.conversation_id);
-          triggerRefresh();
-          isNewConversation = false;
+        if (metadata.conversation_id) {
+          assignedConversationId = metadata.conversation_id;
+          if (isNewConversation) {
+            skipHistoryFetchRef.current = true;
+            setActiveConversationId(metadata.conversation_id);
+            triggerRefresh();
+            isNewConversation = false;
+          }
         }
         if (metadata.sources) {
           setMessages((prev) => {
@@ -121,9 +125,21 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
           return next;
         });
       },
-      onComplete: () => {
+      onComplete: async () => {
         setIsLoading(false);
         inputRef.current?.focus();
+        // Synchronisation automatique de sécurité pour afficher la réponse sans actualisation
+        const targetId = assignedConversationId || activeConversationId;
+        if (targetId) {
+          try {
+            const resp = await chatAPI.getConversationDetail(targetId);
+            if (resp.data?.messages && resp.data.messages.length > 0) {
+              setMessages(resp.data.messages);
+            }
+          } catch (e) {
+            console.error('Erreur lors de la synchronisation des messages:', e);
+          }
+        }
       },
     });
   };

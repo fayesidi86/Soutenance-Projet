@@ -1,48 +1,49 @@
 # 🇲🇱 AssistantJuridique MALI
 
-**Assistant juridique intelligent** basé sur les textes de loi du Mali, propulsé par l'IA (Google Gemini) et une architecture **RAG** (Retrieval-Augmented Generation).
+**Assistant juridique intelligent** basé sur les textes de loi du Mali, propulsé par l'IA (Google Gemini) et une architecture **RAG** (Retrieval-Augmented Generation) haute performance avec streaming en temps réel et résilience multi-modèles.
 
 ---
 
 ## 📋 Table des matières
 
-- [Architecture](#architecture)
-- [Prérequis](#prérequis)
-- [Installation](#installation)
+- [Architecture & Fonctionnalités](#-architecture--fonctionnalités)
+- [Prérequis](#-prérequis)
+- [Installation](#-installation)
   - [1. Base de données PostgreSQL](#1-base-de-données-postgresql)
   - [2. Backend FastAPI](#2-backend-fastapi)
   - [3. Frontend React/Vite](#3-frontend-reactvite)
-- [Configuration](#configuration)
-- [Déploiement (Render & Vercel)](#-déploiement-en-production)
-- [Utilisation](#utilisation)
-- [Structure du projet](#structure-du-projet)
+- [Configuration (.env)](#-configuration)
+- [Déploiement en Production (Render & Vercel)](#-déploiement-en-production)
+- [Utilisation](#-utilisation)
+- [Structure du projet](#-structure-du-projet)
+- [Technologies](#-technologies)
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Fonctionnalités
 
 ```
 ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
 │   Frontend      │────▶│   Backend FastAPI     │────▶│  PostgreSQL +       │
-│   React + Vite  │◀────│   (API REST + RAG)    │◀────│  pgvector           │
+│   React + Vite  │◀────│   (API REST + SSE)   │◀────│  pgvector           │
 │   Tailwind CSS  │     │                      │     │                     │
 └─────────────────┘     └──────────┬───────────┘     └─────────────────────┘
                                    │
                                    ▼
                         ┌──────────────────────┐
                         │   Google Gemini API   │
-                        │   - Embeddings        │
-                        │   - LLM Chat          │
+                        │   - Embeddings 768d   │
+                        │   - Fallback Cascade │
                         └──────────────────────┘
 ```
 
-**Flux RAG :**
-1. L'admin uploade un PDF de loi malienne
-2. Le PDF est découpé en chunks (par articles)
-3. Chaque chunk est vectorisé via `gemini-embedding-001` (768 dimensions)
-4. L'utilisateur pose une question
-5. Les 4 chunks les plus pertinents sont récupérés (distance cosinus)
-6. Gemini génère une réponse basée **exclusivement** sur ces textes, avec citations
+### ✨ Points Forts du Système
+1. **Streaming SSE Ultra-Fluide :** Réponses générées mot par mot en streaming Server-Sent Events avec en-têtes anti-buffering (`X-Accel-Buffering: no`).
+2. **Résilience & Cascade Multi-Modèles :** En cas de pic de trafic ou indisponibilité temporaire (erreur `503 UNAVAILABLE` de Google), le backend bascule automatiquement sur les modèles de secours (`gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.7-flash`).
+3. **Indexation PDF par Batch :** Vectorisation et insertion groupées des chunks pour traiter de volumineux codes de loi sans dépassement de quota.
+4. **Détection Rapide des Salutations :** Réponse instantanée aux formules de politesse et salutations (en français et en bambara : *I ni ce*, *I ni sogoma*, etc.) sans consommer d'appel LLM.
+5. **Vulgarisation Juridique Systématique :** Chaque réponse commence obligatoirement par une définition claire et vulgarisée de la notion demandée avant de citer les articles officiels.
+6. **Sources & Citations Exactes :** Citation systématique du document source et des numéros d'articles avec distance vectorielle cosinus.
 
 ---
 

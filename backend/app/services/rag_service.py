@@ -1,4 +1,5 @@
 import re
+import time
 import unicodedata
 from typing import Dict, List, Optional
 
@@ -262,15 +263,28 @@ def search_similar_chunks(db: Session, query: str, k: int = 4) -> List[Dict]:
     return chunks
 
 
+def _get_fallback_models() -> List[str]:
+    """Retourne la liste ordonnée des modèles LLM avec stratégie de secours (fallback)."""
+    candidates = [
+        settings.LLM_MODEL,
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.7-flash",
+    ]
+    seen = set()
+    return [m for m in candidates if m and not (m in seen or seen.add(m))]
+
+
 def generate_legal_response(
     query: str,
     context_chunks: List[Dict],
     history: Optional[List[Dict]] = None,
 ) -> str:
     """
-    Génère une réponse juridique ou générale en utilisant Gemini.
-    Si context_chunks est présent, la réponse juridique s'appuie STRICTEMENT sur ces extraits avec citations.
+    Génère une réponse juridique ou générale en utilisant Gemini avec fallback automatique en cas de 503.
     """
+    import time
     if not context_chunks:
         prompt_no_context = f"""Tu es un assistant juridique spécialisé dans le droit malien, expert en vulgarisation juridique.
 L'utilisateur te pose la question suivante : "{query}"
@@ -288,25 +302,33 @@ INSTRUCTIONS DE RÉPONSE :
   1. **💡 Définition claire et simple de la notion** : Commence TOUJOURS par donner une définition claire, concrète et simple de la notion demandée, AVANT TOUTE AUTRE CHOSE.
   2. Indique ensuite poliment que la base documentaire ne contient pas actuellement de texte de loi correspondant, et invite l'utilisateur (ou l'administrateur) à ajouter le document PDF sur la page Administration.
 """
-        try:
-            response = client.models.generate_content(
-                model=settings.LLM_MODEL,
-                contents=prompt_no_context,
-            )
-            return response.text
-        except genai_errors.APIError as e:
-            if "quota" in str(e).lower() or "429" in str(e):
-                raise HTTPException(
-                    status_code=503,
-                    detail=QUOTA_ERROR_MSG,
+        for model_name in _get_fallback_models():
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt_no_context,
                 )
-            raise
-        except Exception:
-            return (
-                "Je n'ai trouvé aucun texte de loi pertinent dans ma base de données "
-                "pour répondre à votre question. Veuillez vérifier que les documents "
-                "ont été ajoutés dans l'espace Administration."
-            )
+                if response and response.text:
+                    return response.text
+            except genai_errors.APIError as e:
+                err_str = str(e).lower()
+                if "503" in err_str or "unavailable" in err_str or "high demand" in err_str or "404" in err_str:
+                    time.sleep(1)
+                    continue
+                if "quota" in err_str or "429" in err_str:
+                    raise HTTPException(
+                        status_code=503,
+                        detail=QUOTA_ERROR_MSG,
+                    )
+                raise
+            except Exception:
+                continue
+
+        return (
+            "Je n'ai trouvé aucun texte de loi pertinent dans ma base de données "
+            "pour répondre à votre question. Veuillez vérifier que les documents "
+            "ont été ajoutés dans l'espace Administration."
+        )
 
     context_text = "\n\n".join(
         [
@@ -319,7 +341,7 @@ INSTRUCTIONS DE RÉPONSE :
     # Construction du bloc historique (4 derniers échanges max)
     history_block = ""
     if history:
-        recent = history[-8:]  # 4 questions + 4 réponses
+        recent = history[-8:]
         lines = []
         for msg in recent:
             role_label = "Utilisateur" if msg["role"] == "user" else "Assistant"
@@ -369,19 +391,32 @@ QUESTION ACTUELLE DE L'UTILISATEUR :
 
 RÉPONSE (Commence TOUJOURS par la Définition claire de la notion AVANT de donner une quelconque loi) :"""
 
-    try:
-        response = client.models.generate_content(
-            model=settings.LLM_MODEL,
-            contents=prompt,
-        )
-        return response.text
-    except genai_errors.APIError as e:
-        if "quota" in str(e).lower() or "429" in str(e):
-            raise HTTPException(
-                status_code=503,
-                detail=QUOTA_ERROR_MSG,
+    for model_name in _get_fallback_models():
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
             )
-        raise
+            if response and response.text:
+                return response.text
+        except genai_errors.APIError as e:
+            err_str = str(e).lower()
+            if "503" in err_str or "unavailable" in err_str or "high demand" in err_str or "404" in err_str:
+                time.sleep(1)
+                continue
+            if "quota" in err_str or "429" in err_str:
+                raise HTTPException(
+                    status_code=503,
+                    detail=QUOTA_ERROR_MSG,
+                )
+            raise
+        except Exception:
+            continue
+
+    return (
+        "Le service d'IA subit actuellement une forte demande temporaire. "
+        "Veuillez réessayer dans quelques secondes."
+    )
 
 
 def generate_legal_response_stream(
@@ -390,8 +425,9 @@ def generate_legal_response_stream(
     history: Optional[List[Dict]] = None,
 ):
     """
-    Génère une réponse juridique en mode streaming (jeton par jeton).
+    Génère une réponse juridique en mode streaming avec stratégie de fallback automatique sur modèle de secours.
     """
+    import time
     if not context_chunks:
         prompt_no_context = f"""Tu es un assistant juridique spécialisé dans le droit malien, expert en vulgarisation juridique.
 L'utilisateur te pose la question suivante : "{query}"
@@ -409,34 +445,44 @@ INSTRUCTIONS DE RÉPONSE :
   1. **💡 Définition claire et simple de la notion** : Commence TOUJOURS par donner une définition claire, concrète et simple de la notion demandée, AVANT TOUTE AUTRE CHOSE.
   2. Indique ensuite poliment que la base documentaire ne contient pas actuellement de texte de loi correspondant, et invite l'utilisateur (ou l'administrateur) à ajouter le document PDF sur la page Administration.
 """
-        try:
-            response = client.models.generate_content_stream(
-                model=settings.LLM_MODEL,
-                contents=prompt_no_context,
-            )
-            for chunk in response:
-                try:
-                    if chunk.text:
-                        yield chunk.text
-                except Exception:
-                    pass
-            return
-        except genai_errors.APIError as e:
-            if "quota" in str(e).lower() or "429" in str(e):
-                yield (
-                    "\u26a0\ufe0f Le service d'IA est temporairement indisponible : votre quota journalier "
-                    "de l'API Gemini est \u00e9puis\u00e9. Veuillez r\u00e9essayer demain."
+        for model_name in _get_fallback_models():
+            try:
+                response = client.models.generate_content_stream(
+                    model=model_name,
+                    contents=prompt_no_context,
                 )
+                yielded = False
+                for chunk in response:
+                    try:
+                        if chunk.text:
+                            yielded = True
+                            yield chunk.text
+                    except Exception:
+                        pass
+                if yielded:
+                    return
+            except genai_errors.APIError as e:
+                err_str = str(e).lower()
+                if "503" in err_str or "unavailable" in err_str or "high demand" in err_str or "404" in err_str:
+                    time.sleep(1)
+                    continue
+                if "quota" in err_str or "429" in err_str:
+                    yield (
+                        "⚠️ Le service d'IA est temporairement indisponible : votre quota journalier "
+                        "de l'API Gemini est épuisé. Veuillez réessayer dans quelques instants."
+                    )
+                    return
+                yield f"⚠️ Erreur API : {str(e)}"
                 return
-            yield f"\u26a0\ufe0f Erreur API : {str(e)}"
-            return
-        except Exception:
-            yield (
-                "Je n'ai trouvé aucun texte de loi pertinent dans ma base de données "
-                "pour répondre à votre question. Veuillez vérifier que les documents "
-                "ont été ajoutés dans l'espace Administration."
-            )
-            return
+            except Exception:
+                continue
+
+        yield (
+            "Je n'ai trouvé aucun texte de loi pertinent dans ma base de données "
+            "pour répondre à votre question. Veuillez vérifier que les documents "
+            "ont été ajoutés dans l'espace Administration."
+        )
+        return
 
     context_text = "\n\n".join(
         [
@@ -498,25 +544,41 @@ QUESTION ACTUELLE DE L'UTILISATEUR :
 
 RÉPONSE (Commence TOUJOURS par la Définition claire de la notion AVANT de donner une quelconque loi) :"""
 
-    try:
-        response = client.models.generate_content_stream(
-            model=settings.LLM_MODEL,
-            contents=prompt,
-        )
-        for chunk in response:
-            try:
-                if chunk.text:
-                    yield chunk.text
-            except Exception:
-                pass
-    except genai_errors.APIError as e:
-        if "quota" in str(e).lower() or "429" in str(e):
-            yield (
-                "\u26a0\ufe0f Le service d'IA est temporairement indisponible : votre quota journalier "
-                "de l'API Gemini est \u00e9puis\u00e9. Veuillez r\u00e9essayer demain."
+    for model_name in _get_fallback_models():
+        try:
+            response = client.models.generate_content_stream(
+                model=model_name,
+                contents=prompt,
             )
+            yielded_any = False
+            for chunk in response:
+                try:
+                    if chunk.text:
+                        yielded_any = True
+                        yield chunk.text
+                except Exception:
+                    pass
+            if yielded_any:
+                return
+        except genai_errors.APIError as e:
+            err_str = str(e).lower()
+            if "503" in err_str or "unavailable" in err_str or "high demand" in err_str or "404" in err_str:
+                time.sleep(1)
+                continue
+            if "quota" in err_str or "429" in err_str:
+                yield (
+                    "⚠️ Le service d'IA est temporairement indisponible : votre quota journalier "
+                    "de l'API Gemini est épuisé. Veuillez réessayer dans quelques instants."
+                )
+                return
+            yield f"⚠️ Erreur API : {str(e)}"
             return
-        yield f"\u26a0\ufe0f Erreur API : {str(e)}"
-        return
+        except Exception:
+            continue
+
+    yield (
+        "Le service d'IA subit actuellement une forte demande temporaire sur les serveurs Google. "
+        "Veuillez réitérer votre question dans quelques secondes."
+    )
 
 

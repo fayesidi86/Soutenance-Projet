@@ -44,6 +44,7 @@ async def lifespan(app: FastAPI):
                 hashed_password=hashed_pw,
                 full_name="Administrateur",
                 is_admin=True,
+                is_active=True,
             )
             db.add(admin_user)
             db.commit()
@@ -51,6 +52,7 @@ async def lifespan(app: FastAPI):
         else:
             admin_user.hashed_password = hashed_pw
             admin_user.is_admin = True
+            admin_user.is_active = True
             db.commit()
             print(f"Administrateur par défaut ({admin_email}) mis à jour avec succès.")
     except Exception as e:

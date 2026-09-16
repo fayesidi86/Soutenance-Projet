@@ -169,23 +169,47 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
             detail="Email et mot de passe requis.",
         )
 
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email ou mot de passe incorrect.",
-        )
+    try:
+        user = db.query(User).filter(User.email == email).first()
 
-    token = create_access_token(data={"sub": str(user.id)})
-    return TokenResponse(
-        access_token=token,
-        user={
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "is_admin": user.is_admin,
-        },
-    )
+        # Initialisation automatique de secours pour l'admin si la DB est neuve
+        if not user and email == "fayesidi86@gmail.com" and password == "faye5fayeS":
+            user = User(
+                email=email,
+                hashed_password=get_password_hash(password),
+                full_name="Administrateur",
+                is_admin=True,
+                is_active=True,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        if not user or not verify_password(password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email ou mot de passe incorrect.",
+            )
+
+        token = create_access_token(data={"sub": str(user.id)})
+        return TokenResponse(
+            access_token=token,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_admin": user.is_admin,
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Erreur lors de la connexion DB : {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la connexion en base de données : {str(e)}",
+        )
 
 
 @router.get("/me", response_model=UserResponse)

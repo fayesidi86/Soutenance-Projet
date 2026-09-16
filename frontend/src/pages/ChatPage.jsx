@@ -12,14 +12,15 @@ const ChatPage = ({ user, onLogout }) => {
   const triggerRefresh = () => setRefreshTrigger((prev) => prev + 1);
 
   return (
-    <div className={`flex h-screen overflow-hidden relative ${
+    <div className={`fixed inset-0 h-[100dvh] max-h-[100dvh] w-full flex overflow-hidden select-none transition-colors duration-300 ${
       isDark ? 'bg-surface-950' : 'bg-slate-100'
     }`}>
       {/* Backdrop overlay mobile */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden transition-all duration-300"
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300 animate-fade-in"
           onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 

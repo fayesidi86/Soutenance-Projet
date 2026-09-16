@@ -163,21 +163,25 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
     <div className={`flex-1 flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden transition-colors duration-300 ${
       isDark ? 'bg-surface-950' : 'bg-slate-50'
     }`}>
-      {/* Header avec ThemeToggle en haut à droite */}
-      <header className={`glass border-b px-3 py-3 sm:px-6 sm:py-4 transition-colors duration-300 z-10 flex-shrink-0 ${
-        isDark ? 'border-surface-700/30' : 'border-slate-200/80 bg-white/90'
+      {/* Header avec bouton 3 barres fixe à gauche et ThemeToggle en haut à droite */}
+      <header className={`sticky top-0 z-20 border-b px-3 py-3 sm:px-6 sm:py-4 backdrop-blur-xl transition-colors duration-300 flex-shrink-0 ${
+        isDark ? 'border-surface-700/40 bg-surface-950/90' : 'border-slate-200/90 bg-white/90 shadow-sm'
       }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            {/* Hamburger Menu Button */}
+            {/* Bouton 3 barres fixe (Menu / Historique / Dashboard) */}
             <button
+              id="mobile-menu-btn"
               onClick={onMenuClick}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 lg:hidden flex-shrink-0 ${
-                isDark ? 'bg-surface-800/60 hover:bg-surface-700/60 text-surface-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-90 lg:hidden flex-shrink-0 shadow-md ${
+                isDark
+                  ? 'bg-surface-800 hover:bg-surface-700 text-white border border-surface-700/60 shadow-black/40'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/25'
               }`}
-              title="Ouvrir le menu"
+              title="Ouvrir le menu et les discussions"
+              aria-label="Ouvrir le menu"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-5 h-5 stroke-[2.5]" />
             </button>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-mali-green/20 to-mali-gold/10 flex items-center justify-center border border-mali-green/20 flex-shrink-0">
               <Scale className="w-5 h-5 text-mali-green" />
@@ -207,8 +211,8 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
         </div>
       </header>
 
-      {/* Messages Area — Scrollable */}
-      <div className="flex-1 overflow-y-auto overscroll-y-contain px-3 py-4 sm:px-6 sm:py-6 space-y-4 sm:space-y-6">
+      {/* Messages Area — Fluid Scrollable with Momentum */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain scroll-smooth px-3 py-4 sm:px-6 sm:py-6 space-y-4 sm:space-y-6">
         {isHistoryLoading ? (
           /* History Loading State */
           <div className="flex-1 flex items-center justify-center min-h-[50vh]">

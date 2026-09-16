@@ -75,42 +75,45 @@ const Sidebar = ({
   }
 
   return (
-    <aside className={`fixed inset-y-0 left-0 z-40 w-72 h-screen backdrop-blur-xl flex flex-col transform ${
-      isOpen ? 'translate-x-0' : '-translate-x-full'
-    } lg:translate-x-0 lg:static lg:inset-auto transition-all duration-300 ease-in-out border-r ${
+    <aside className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 max-w-[88vw] h-[100dvh] max-h-[100dvh] backdrop-blur-2xl flex flex-col transform ${
+      isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+    } lg:translate-x-0 lg:static lg:inset-auto lg:h-screen transition-transform duration-300 ease-out border-r ${
       isDark
-        ? 'bg-surface-900/80 border-surface-700/30'
-        : 'bg-white/80 border-surface-200/60'
+        ? 'bg-surface-900 border-surface-700/50'
+        : 'bg-white border-slate-200'
     }`}>
       {/* Logo & Brand */}
-      <div className={`p-6 border-b flex items-center justify-between ${
-        isDark ? 'border-surface-700/30' : 'border-surface-200/60'
+      <div className={`p-4 sm:p-6 border-b flex items-center justify-between flex-shrink-0 ${
+        isDark ? 'border-surface-700/40' : 'border-slate-200'
       }`}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-mali flex items-center justify-center shadow-lg shadow-mali-green/20">
+          <div className="w-10 h-10 rounded-xl gradient-mali flex items-center justify-center shadow-lg shadow-mali-green/20 flex-shrink-0">
             <Scale className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className={`text-lg font-bold leading-tight ${
-              isDark ? 'text-white' : 'text-surface-900'
+            <h1 className={`text-base sm:text-lg font-bold leading-tight ${
+              isDark ? 'text-white' : 'text-slate-900'
             }`}>
               Assistant<span className="text-gradient-mali">Juridique</span>
             </h1>
-            <p className={`text-xs font-medium tracking-wider uppercase ${
-              isDark ? 'text-surface-400' : 'text-surface-500'
+            <p className={`text-xxs sm:text-xs font-semibold tracking-wider uppercase ${
+              isDark ? 'text-surface-400' : 'text-slate-500'
             }`}>
-              Mali
+              Mali • Discussions
             </p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 lg:hidden flex-shrink-0 ${
-            isDark ? 'bg-surface-800/50 hover:bg-surface-700/50' : 'bg-surface-100 hover:bg-surface-200'
+          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 lg:hidden flex-shrink-0 active:scale-95 ${
+            isDark 
+              ? 'bg-surface-800 hover:bg-surface-700 text-surface-200 border border-surface-700' 
+              : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
           }`}
           title="Fermer le menu"
+          aria-label="Fermer le menu"
         >
-          <X className={`w-4 h-4 ${isDark ? 'text-surface-300' : 'text-surface-500'}`} />
+          <X className="w-4.5 h-4.5" />
         </button>
       </div>
 

@@ -13,10 +13,18 @@ from app.core.database import Base, engine
 async def lifespan(app: FastAPI):
     """Initialise l'extension pgvector, crée les dossiers requis et initialise l'admin."""
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    with engine.connect() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        conn.commit()
-    Base.metadata.create_all(bind=engine)
+    try:
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                conn.commit()
+                print("Extension pgvector initialisée.")
+            except Exception as ext_err:
+                print(f"Note pgvector: {ext_err}")
+        Base.metadata.create_all(bind=engine)
+        print("Tables de base de données créées/vérifiées avec succès.")
+    except Exception as db_err:
+        print(f"Erreur lors de l'initialisation des tables : {db_err}")
 
     # Création ou mise à jour de l'administrateur par défaut
     from app.core.database import SessionLocal

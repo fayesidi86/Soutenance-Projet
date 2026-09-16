@@ -117,33 +117,44 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
             detail="Le mot de passe doit contenir au moins 6 caractères.",
         )
 
-    existing = db.query(User).filter(User.email == email).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Un compte avec cet email existe déjà.",
+    try:
+        existing = db.query(User).filter(User.email == email).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Un compte avec cet email existe déjà.",
+            )
+
+        user = User(
+            email=email,
+            hashed_password=get_password_hash(password),
+            full_name=full_name,
+            is_admin=False,
+            is_active=True,
         )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
-    user = User(
-        email=email,
-        hashed_password=get_password_hash(password),
-        full_name=full_name,
-        is_admin=False,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    token = create_access_token(data={"sub": str(user.id)})
-    return TokenResponse(
-        access_token=token,
-        user={
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "is_admin": user.is_admin,
-        },
-    )
+        token = create_access_token(data={"sub": str(user.id)})
+        return TokenResponse(
+            access_token=token,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_admin": user.is_admin,
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Erreur d'inscription DB : {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de l'enregistrement en base de données : {str(e)}",
+        )
 
 
 @router.post("/login", response_model=TokenResponse)

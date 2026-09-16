@@ -133,6 +133,79 @@ def generate_embedding(content: str) -> List[float]:
         )
 
 
+def generate_embeddings_batch(contents: List[str], batch_size: int = 50) -> List[List[float]]:
+    """
+    Génère les embeddings pour une liste de textes par lots (batch) optimisés.
+    Réduit drastiquement le nombre de requêtes API (1 requête pour 50 textes)
+    et gère le rate limiting avec retry automatique.
+    """
+    if not contents:
+        return []
+
+    import time
+    all_embeddings = []
+    for i in range(0, len(contents), batch_size):
+        batch = contents[i : i + batch_size]
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = client.models.embed_content(
+                    model=settings.EMBEDDING_MODEL,
+                    contents=batch,
+                    config=types.EmbedContentConfig(output_dimensionality=768),
+                )
+                batch_vectors = [emb.values for emb in response.embeddings]
+                all_embeddings.extend(batch_vectors)
+                break
+            except genai_errors.APIError as e:
+                is_rate_limit = "quota" in str(e).lower() or "429" in str(e) or "resource" in str(e).lower()
+                if is_rate_limit and attempt < max_retries - 1:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                if is_rate_limit:
+                    raise HTTPException(
+                        status_code=503,
+                        detail=QUOTA_ERROR_MSG,
+                    )
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Erreur API Gemini lors de la vectorisation : {str(e)}",
+                )
+        if i + batch_size < len(contents):
+            time.sleep(0.5)
+
+    return all_embeddings
+
+
+def store_chunks_batch(
+    db: Session, document_id: int, chunks: List[Dict]
+) -> int:
+    """
+    Stocke tous les chunks d'un document en base de données avec leurs embeddings
+    générés par lots rapides (batching).
+    """
+    if not chunks:
+        return 0
+
+    contents = [c["content"] for c in chunks]
+    embeddings = generate_embeddings_batch(contents)
+
+    db_chunks = []
+    for chunk_data, emb in zip(chunks, embeddings):
+        db_chunks.append(
+            DocumentChunk(
+                document_id=document_id,
+                content=chunk_data["content"],
+                article_reference=chunk_data.get("article_reference"),
+                embedding=emb,
+            )
+        )
+
+    db.bulk_save_objects(db_chunks)
+    db.commit()
+    return len(db_chunks)
+
+
 def store_chunk_with_embedding(
     db: Session, document_id: int, content: str, article_reference: str
 ) -> DocumentChunk:

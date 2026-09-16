@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.models import Document, DocumentChunk, User, Conversation, Message
 from app.services.pdf_service import extract_text_from_pdf, chunk_legal_text
-from app.services.rag_service import store_chunk_with_embedding
+from app.services.rag_service import store_chunk_with_embedding, store_chunks_batch
 
 router = APIRouter(prefix="/api/admin", tags=["Administration"])
 
@@ -92,37 +92,38 @@ def upload_document(
             detail="Impossible d'extraire du texte de ce PDF. Vérifiez qu'il n'est pas scanné comme une image ou vide.",
         )
 
-    # Stockage des chunks avec embeddings
-    stored_count = 0
-    for chunk_data in chunks:
-        try:
-            store_chunk_with_embedding(
-                db=db,
-                document_id=document.id,
-                content=chunk_data["content"],
-                article_reference=chunk_data["article_reference"],
-            )
-            stored_count += 1
-        except HTTPException:
-            # Re-lever les HTTPException (ex: quota épuisé 503) telles quelles
-            db.delete(document)
-            db.commit()
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            raise
-        except Exception as e:
-            print(f"Erreur lors du stockage du chunk: {e}")
-            continue
+    # Stockage optimisé des chunks avec embeddings par lots (Batch)
+    try:
+        stored_count = store_chunks_batch(
+            db=db,
+            document_id=document.id,
+            chunks=chunks,
+        )
+    except HTTPException:
+        db.delete(document)
+        db.commit()
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise
+    except Exception as e:
+        db.delete(document)
+        db.commit()
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        print(f"Erreur lors de l'indexation par lot: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de l'indexation vectorielle : {str(e)}",
+        )
 
     if stored_count == 0:
-        # Nettoyage : suppression de l'enregistrement et du fichier
         db.delete(document)
         db.commit()
         if os.path.exists(file_path):
             os.remove(file_path)
         raise HTTPException(
             status_code=500,
-            detail="Erreur technique lors de la génération des embeddings vectoriels. Veuillez vérifier votre clé API Gemini.",
+            detail="Aucun fragment n'a pu être vectorisé pour ce document.",
         )
 
     return {

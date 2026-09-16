@@ -23,10 +23,10 @@ def send_login_notification(
         logger.info("Les notifications par email sont désactivées (EMAIL_NOTIFICATIONS_ENABLED=False).")
         return
 
-    recipient = settings.ADMIN_NOTIFICATION_EMAIL or "fayesidi86@gmail.com"
-    smtp_user = settings.SMTP_USER
-    smtp_password = settings.SMTP_PASSWORD
-    from_email = settings.SMTP_FROM_EMAIL or smtp_user or "noreply@assistantjuridiquemali.ml"
+    recipient = (settings.ADMIN_NOTIFICATION_EMAIL or "fayesidi86@gmail.com").strip()
+    smtp_user = (settings.SMTP_USER or "").strip()
+    smtp_password = (settings.SMTP_PASSWORD or "").replace(" ", "").strip()
+    from_email = (settings.SMTP_FROM_EMAIL or smtp_user or "noreply@assistantjuridiquemali.ml").strip()
 
     if not smtp_user or not smtp_password:
         logger.warning(

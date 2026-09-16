@@ -1,10 +1,13 @@
-"""Routes d'authentification : inscription, connexion, profil utilisateur."""
-
+import secrets
+import requests
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import (
     create_access_token,
@@ -30,6 +33,10 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+
+class GoogleLoginRequest(BaseModel):
+    credential: str
 
 
 class TokenResponse(BaseModel):
@@ -221,3 +228,120 @@ def get_me(current_user: User = Depends(get_current_user)):
         full_name=current_user.full_name,
         is_admin=current_user.is_admin,
     )
+
+
+def _verify_google_token(credential: str) -> dict:
+    """
+    Vérifie le jeton Google ID (JWT) via google-auth ou via l'endpoint officiel tokeninfo de Google.
+    Retourne les informations du compte Google certifié ou lève une HTTPException.
+    """
+    token_info = None
+
+    # 1. Tentative avec la librairie google-auth
+    try:
+        req = google_requests.Request()
+        audience = settings.GOOGLE_CLIENT_ID if settings.GOOGLE_CLIENT_ID else None
+        token_info = id_token.verify_oauth2_token(credential, req, audience=audience)
+    except Exception as e:
+        print(f"Vérification google-auth échouée ({e}), tentative via tokeninfo API...")
+
+    # 2. Secours direct via l'API officielle Google tokeninfo
+    if not token_info:
+        try:
+            resp = requests.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": credential},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                token_info = resp.json()
+        except Exception as e:
+            print(f"Erreur API tokeninfo Google: {e}")
+
+    if not token_info:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Jeton Google invalide ou expiré.",
+        )
+
+    # 3. Vérifier que l'email est bien vérifié par Google
+    email_verified = token_info.get("email_verified")
+    if isinstance(email_verified, str):
+        email_verified = email_verified.lower() in ["true", "1"]
+
+    if not email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="L'adresse email Google n'a pas été vérifiée par Google.",
+        )
+
+    return token_info
+
+
+@router.post("/google", response_model=TokenResponse)
+def login_with_google(data: GoogleLoginRequest, db: Session = Depends(get_db)):
+    """
+    Authentification ou Inscription directe avec un compte Google vérifié.
+    Vérifie le token auprès de Google, crée le compte si inexistant et retourne le JWT de session.
+    """
+    if not data.credential:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Jeton d'identification Google manquant.",
+        )
+
+    # Vérification sécurisée auprès de Google
+    google_data = _verify_google_token(data.credential)
+    email = google_data.get("email", "").strip().lower()
+    full_name = google_data.get("name", "").strip() or email.split("@")[0]
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Impossible de récupérer l'adresse email depuis le compte Google.",
+        )
+
+    try:
+        user = db.query(User).filter(User.email == email).first()
+
+        if not user:
+            # Création automatique de l'utilisateur certifié Google
+            random_pw = secrets.token_urlsafe(32)
+            is_admin_user = email == "fayesidi86@gmail.com"
+            user = User(
+                email=email,
+                hashed_password=get_password_hash(random_pw),
+                full_name=full_name,
+                is_admin=is_admin_user,
+                is_active=True,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        else:
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Votre compte a été suspendu. Veuillez contacter un administrateur.",
+                )
+
+        token = create_access_token(data={"sub": str(user.id)})
+        return TokenResponse(
+            access_token=token,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_admin": user.is_admin,
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Erreur DB Google Auth: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la synchronisation de l'utilisateur Google : {str(e)}",
+        )
+

@@ -130,7 +130,9 @@ Le frontend sera accessible sur **http://localhost:5173**.
 
 ## 🔧 Configuration
 
-Éditez le fichier `backend/.env` avec vos paramètres :
+Éditez le fichier `backend/.env` et `frontend/.env` avec vos paramètres :
+
+### Backend (`backend/.env`)
 
 | Variable | Description | Valeur par défaut |
 |----------|-------------|-------------------|
@@ -139,6 +141,25 @@ Le frontend sera accessible sur **http://localhost:5173**.
 | `GEMINI_API_KEY` | Clé API Google Gemini | **(obligatoire)** |
 | `LLM_MODEL` | Modèle Gemini pour le chat | `gemini-3.6-flash` |
 | `EMBEDDING_MODEL` | Modèle d'embeddings | `gemini-embedding-001` |
+| `GOOGLE_CLIENT_ID` | Client ID Google OAuth (vérification des comptes Google) | *(optionnel pour Google Sign-In)* |
+
+### Frontend (`frontend/.env` ou Vercel)
+
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `VITE_API_URL` | URL de l'API backend en production | `https://votre-backend.onrender.com` |
+| `VITE_GOOGLE_CLIENT_ID` | Client ID Google OAuth pour le bouton Google | `xxxxxxxxxx.apps.googleusercontent.com` |
+
+---
+
+### 🔑 Comment obtenir un Google Client ID (Gratuit) :
+1. Rendez-vous sur la [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+2. Créez un projet ou sélectionnez un projet existant.
+3. Allez dans **API et services** > **Écran de consentement OAuth** et configurez-le (type *Externe*, nom de l'application).
+4. Allez dans **Identifiants** > **Créer des identifiants** > **ID client OAuth**.
+5. Choisissez **Application Web** et ajoutez :
+   - Origines JavaScript autorisées : `http://localhost:5173` et l'URL de votre frontend Vercel (ex: `https://votre-site.vercel.app`).
+6. Copiez le **Client ID** obtenu dans votre fichier `.env` (`GOOGLE_CLIENT_ID` et `VITE_GOOGLE_CLIENT_ID`).
 
 ---
 
@@ -151,7 +172,7 @@ Le frontend sera accessible sur **http://localhost:5173**.
    - **Runtime** : `Python 3`
    - **Build Command** : `pip install -r requirements.txt`
    - **Start Command** : `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-3. Ajoutez les variables d'environnement (`DATABASE_URL`, `GEMINI_API_KEY`, `SECRET_KEY`, `EMBEDDING_MODEL`, `LLM_MODEL`).
+3. Ajoutez les variables d'environnement (`DATABASE_URL`, `GEMINI_API_KEY`, `SECRET_KEY`, `EMBEDDING_MODEL`, `LLM_MODEL`, `GOOGLE_CLIENT_ID`).
 4. Notez l'URL publique générée (ex: `https://votre-backend.onrender.com`).
 
 ### 2. Frontend sur Vercel (https://vercel.com)
@@ -163,6 +184,7 @@ Le frontend sera accessible sur **http://localhost:5173**.
    - **Output Directory** : `dist`
 3. Dans **Environment Variables**, ajoutez :
    - `VITE_API_URL` = `https://votre-backend.onrender.com` *(l'URL Render sans slash à la fin)*
+   - `VITE_GOOGLE_CLIENT_ID` = `votre-client-id.apps.googleusercontent.com`
 4. Cliquez sur **Deploy**.
 
 ---

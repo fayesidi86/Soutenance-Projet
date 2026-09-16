@@ -120,10 +120,18 @@ except Exception as e:
     errors.append(f"RAG Service: {e}")
     print(f"  ERREUR: {e}")
 
-# ===== TEST 7: FastAPI App =====
+# ===== TEST 7: FastAPI App & Routes =====
 print("\n[7/7] Application FastAPI...")
 try:
     from app.main import app
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    
+    # Test route Google Auth avec token invalide (doit rejeter avec 401)
+    res_google = client.post("/api/auth/google", json={"credential": "invalid_fake_token"})
+    assert res_google.status_code == 401, f"Attendu 401, reçu {res_google.status_code}"
+    print("  OK  POST /api/auth/google: validation et rejet sécurisé des faux tokens (401)")
+
     routes = [(r.path, list(r.methods) if hasattr(r, 'methods') and r.methods else []) for r in app.routes]
     print(f"  OK  App: '{app.title}' v{app.version}")
     print(f"  OK  Middlewares: {[type(m).__name__ for m in app.user_middleware]}")

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "gemini-embedding-001"
     LLM_MODEL: str = "gemini-3.6-flash"
     UPLOAD_DIR: str = "uploads"
+    GOOGLE_CLIENT_ID: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

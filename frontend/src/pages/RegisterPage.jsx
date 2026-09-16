@@ -11,6 +11,7 @@ import {
   EyeOff,
   User,
 } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import { authAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 
@@ -24,6 +25,34 @@ const RegisterPage = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { isDark } = useTheme();
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      setError("Échec de l'inscription via Google.");
+      return;
+    }
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await authAPI.googleLogin(credentialResponse.credential);
+      const { access_token, user } = response.data;
+      localStorage.setItem('token', access_token);
+      localStorage.setItem('user', JSON.stringify(user));
+      onLogin(user);
+      navigate('/chat');
+    } catch (err) {
+      setError(
+        err.response?.data?.detail || "Erreur lors de l'inscription avec Google. Veuillez réessayer."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("L'inscription avec Google a été annulée ou a échoué.");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -248,6 +277,34 @@ const RegisterPage = ({ onLogin }) => {
               )}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-surface-700/50"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className={`px-3 font-medium ${
+                isDark ? 'bg-surface-950 text-surface-400' : 'bg-slate-100 text-slate-500'
+              }`}>
+                Ou s'inscrire avec
+              </span>
+            </div>
+          </div>
+
+          {/* Google Sign-In Button */}
+          <div className="flex justify-center w-full">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme={isDark ? 'filled_black' : 'outline'}
+              size="large"
+              text="signup_with"
+              shape="rectangular"
+              width="100%"
+              locale="fr"
+            />
+          </div>
 
           <p className="text-center text-sm text-surface-400 mt-8">
             Déjà inscrit ?{' '}

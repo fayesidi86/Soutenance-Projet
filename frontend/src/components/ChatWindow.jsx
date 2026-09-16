@@ -14,6 +14,7 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const skipHistoryFetchRef = useRef(false);
   const { isDark } = useTheme();
 
   const scrollToBottom = () => {
@@ -26,6 +27,12 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
 
   // Charger l'historique de la discussion sélectionnée
   useEffect(() => {
+    // Éviter d'écraser les messages en plein streaming lors de l'attribution de l'ID
+    if (skipHistoryFetchRef.current) {
+      skipHistoryFetchRef.current = false;
+      return;
+    }
+
     const loadConversationHistory = async () => {
       if (activeConversationId === null) {
         setMessages([]);
@@ -63,6 +70,7 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
     await chatAPI.askStream(question, activeConversationId, {
       onMetadata: (metadata) => {
         if (isNewConversation && metadata.conversation_id) {
+          skipHistoryFetchRef.current = true;
           setActiveConversationId(metadata.conversation_id);
           triggerRefresh();
           isNewConversation = false;
@@ -87,6 +95,8 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
               ...next[lastIdx],
               content: next[lastIdx].content + token,
             };
+          } else {
+            next.push({ role: 'assistant', content: token, sources: [] });
           }
           return next;
         });
@@ -101,6 +111,12 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
               content: errMsg || 'Une erreur est survenue lors du traitement de votre question. Veuillez réessayer.',
               isError: true,
             };
+          } else {
+            next.push({
+              role: 'assistant',
+              content: errMsg || 'Une erreur est survenue.',
+              isError: true,
+            });
           }
           return next;
         });

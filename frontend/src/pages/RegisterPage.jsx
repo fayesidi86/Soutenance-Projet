@@ -14,6 +14,7 @@ import {
 import { GoogleLogin } from '@react-oauth/google';
 import { authAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 const RegisterPage = ({ onLogin }) => {
   const [fullName, setFullName] = useState('');
@@ -88,18 +89,25 @@ const RegisterPage = ({ onLogin }) => {
   };
 
   return (
-    <div className={`min-h-screen flex transition-colors duration-300 ${
-      isDark ? 'bg-surface-950' : 'bg-slate-100'
+    <div className={`min-h-screen flex relative transition-colors duration-300 ${
+      isDark ? 'bg-surface-950' : 'bg-slate-50'
     }`}>
+      {/* Top-Right Theme Toggle */}
+      <div className="absolute top-4 right-4 z-30">
+        <ThemeToggle />
+      </div>
+
       {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+      <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden border-r ${
+        isDark ? 'border-surface-800/60' : 'border-slate-200'
+      }`}>
         <div className="absolute inset-0 gradient-mali-subtle"></div>
         <div className={`absolute inset-0 ${
-          isDark ? 'bg-surface-950/60' : 'bg-white/40'
+          isDark ? 'bg-surface-950/70' : 'bg-white/80'
         }`}></div>
 
-        <div className="absolute top-32 right-20 w-72 h-72 rounded-full bg-mali-gold/5 blur-3xl"></div>
-        <div className="absolute bottom-20 left-16 w-64 h-64 rounded-full bg-mali-green/5 blur-3xl"></div>
+        <div className="absolute top-32 right-20 w-72 h-72 rounded-full bg-mali-gold/10 blur-3xl"></div>
+        <div className="absolute bottom-20 left-16 w-64 h-64 rounded-full bg-mali-green/10 blur-3xl"></div>
 
         <div className="relative z-10 flex flex-col justify-center px-16">
           <div className="flex items-center gap-4 mb-8">
@@ -107,18 +115,24 @@ const RegisterPage = ({ onLogin }) => {
               <Scale className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className={`text-3xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 Assistant<span className="text-gradient-mali">Juridique</span>
               </h1>
-              <p className="text-surface-400 font-medium">République du Mali</p>
+              <p className={`font-semibold text-sm ${isDark ? 'text-surface-400' : 'text-slate-600'}`}>
+                République du Mali
+              </p>
             </div>
           </div>
 
-          <h2 className="text-4xl font-bold text-white leading-tight mb-4">
+          <h2 className={`text-4xl font-extrabold leading-tight mb-4 ${
+            isDark ? 'text-white' : 'text-slate-900'
+          }`}>
             Rejoignez la<br />
             <span className="text-gradient-mali">communauté juridique</span>
           </h2>
-          <p className="text-lg text-surface-300 leading-relaxed max-w-md">
+          <p className={`text-lg leading-relaxed max-w-md ${
+            isDark ? 'text-surface-300' : 'text-slate-700 font-medium'
+          }`}>
             Créez votre compte pour accéder à un assistant juridique intelligent,
             alimenté par les textes de loi officiels du Mali.
           </p>
@@ -134,7 +148,9 @@ const RegisterPage = ({ onLogin }) => {
                 <div className="w-6 h-6 rounded-full bg-mali-green/20 flex items-center justify-center">
                   <div className="w-2 h-2 rounded-full bg-mali-green"></div>
                 </div>
-                <p className="text-surface-300 text-sm">{feature}</p>
+                <p className={`text-sm font-medium ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>
+                  {feature}
+                </p>
               </div>
             ))}
           </div>
@@ -155,20 +171,22 @@ const RegisterPage = ({ onLogin }) => {
             <div className="w-12 h-12 rounded-xl gradient-mali flex items-center justify-center shadow-lg">
               <Scale className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Assistant<span className="text-gradient-mali">Juridique</span>
             </h1>
           </div>
 
           <div className="text-center lg:text-left mb-8">
-            <h2 className="text-2xl font-bold text-white mb-2">Créer un compte</h2>
-            <p className="text-surface-400">
+            <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Créer un compte
+            </h2>
+            <p className={`text-sm ${isDark ? 'text-surface-400' : 'text-slate-600'}`}>
               Inscrivez-vous pour commencer à utiliser l'assistant.
             </p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-mali-red/10 border border-mali-red/20 text-mali-red text-sm animate-slide-up">
+            <div className="mb-6 p-4 rounded-xl bg-mali-red/10 border border-mali-red/20 text-mali-red text-sm animate-slide-up font-medium">
               {error}
             </div>
           )}
@@ -176,11 +194,15 @@ const RegisterPage = ({ onLogin }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${
+                isDark ? 'text-surface-300' : 'text-slate-700'
+              }`}>
                 Nom complet
               </label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-500" />
+                <User className={`absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 ${
+                  isDark ? 'text-surface-500' : 'text-slate-400'
+                }`} />
                 <input
                   id="register-name"
                   type="text"
@@ -195,11 +217,15 @@ const RegisterPage = ({ onLogin }) => {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${
+                isDark ? 'text-surface-300' : 'text-slate-700'
+              }`}>
                 Adresse email
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-500" />
+                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 ${
+                  isDark ? 'text-surface-500' : 'text-slate-400'
+                }`} />
                 <input
                   id="register-email"
                   type="email"
@@ -214,11 +240,15 @@ const RegisterPage = ({ onLogin }) => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${
+                isDark ? 'text-surface-300' : 'text-slate-700'
+              }`}>
                 Mot de passe
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-500" />
+                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 ${
+                  isDark ? 'text-surface-500' : 'text-slate-400'
+                }`} />
                 <input
                   id="register-password"
                   type={showPassword ? 'text' : 'password'}
@@ -231,7 +261,9 @@ const RegisterPage = ({ onLogin }) => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-300 transition-colors"
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${
+                    isDark ? 'text-surface-500 hover:text-surface-300' : 'text-slate-400 hover:text-slate-700'
+                  }`}
                 >
                   {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
                 </button>
@@ -240,11 +272,15 @@ const RegisterPage = ({ onLogin }) => {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${
+                isDark ? 'text-surface-300' : 'text-slate-700'
+              }`}>
                 Confirmer le mot de passe
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-500" />
+                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 ${
+                  isDark ? 'text-surface-500' : 'text-slate-400'
+                }`} />
                 <input
                   id="register-confirm-password"
                   type={showPassword ? 'text' : 'password'}
@@ -262,7 +298,7 @@ const RegisterPage = ({ onLogin }) => {
               id="register-submit"
               type="submit"
               disabled={isLoading}
-              className="btn-primary w-full flex items-center justify-center gap-2 py-3 mt-2"
+              className="btn-primary w-full flex items-center justify-center gap-2 py-3 mt-2 font-semibold shadow-lg"
             >
               {isLoading ? (
                 <>
@@ -281,11 +317,13 @@ const RegisterPage = ({ onLogin }) => {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-surface-700/50"></div>
+              <div className={`w-full border-t ${
+                isDark ? 'border-surface-800' : 'border-slate-300'
+              }`}></div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className={`px-3 font-medium ${
-                isDark ? 'bg-surface-950 text-surface-400' : 'bg-slate-100 text-slate-500'
+            <div className="relative flex justify-center text-xs uppercase font-bold tracking-wider">
+              <span className={`px-3 ${
+                isDark ? 'bg-surface-950 text-surface-400' : 'bg-slate-50 text-slate-500'
               }`}>
                 Ou s'inscrire avec
               </span>
@@ -306,11 +344,13 @@ const RegisterPage = ({ onLogin }) => {
             />
           </div>
 
-          <p className="text-center text-sm text-surface-400 mt-8">
+          <p className={`text-center text-sm mt-8 ${
+            isDark ? 'text-surface-400' : 'text-slate-600 font-medium'
+          }`}>
             Déjà inscrit ?{' '}
             <Link
               to="/login"
-              className="text-mali-green font-semibold hover:text-mali-green-dark transition-colors"
+              className="text-mali-green font-bold hover:text-mali-green-dark transition-colors underline"
             >
               Se connecter
             </Link>

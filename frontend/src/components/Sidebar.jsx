@@ -133,15 +133,19 @@ const Sidebar = ({
               }}
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group ${
                 activeConversationId === null
-                  ? 'bg-mali-green/15 border border-mali-green/30 text-mali-green shadow-lg shadow-mali-green/5'
-                  : 'text-surface-300 hover:bg-surface-800/60 hover:text-white border border-transparent'
+                  ? 'bg-mali-green/15 border border-mali-green/30 text-mali-green shadow-sm'
+                  : isDark
+                  ? 'text-surface-300 hover:bg-surface-800/60 hover:text-white border border-transparent'
+                  : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
               }`}
             >
               <div
                 className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 ${
                   activeConversationId === null
-                    ? 'bg-mali-green/20'
-                    : 'bg-surface-700/40 group-hover:bg-surface-600/40'
+                    ? 'bg-mali-green/20 text-mali-green'
+                    : isDark
+                    ? 'bg-surface-700/40 text-surface-300 group-hover:bg-surface-600/40 group-hover:text-white'
+                    : 'bg-slate-200/70 text-slate-700 group-hover:bg-slate-200 group-hover:text-slate-900'
                 }`}
               >
                 <Plus className="w-4.5 h-4.5" />
@@ -150,7 +154,11 @@ const Sidebar = ({
                 <p className="text-sm font-semibold">Nouvelle Discussion</p>
                 <p
                   className={`text-xs ${
-                    activeConversationId === null ? 'text-mali-green/70' : 'text-surface-500'
+                    activeConversationId === null
+                      ? 'text-mali-green/80'
+                      : isDark
+                      ? 'text-surface-500'
+                      : 'text-slate-500'
                   }`}
                 >
                   Démarrer un nouveau chat
@@ -173,15 +181,19 @@ const Sidebar = ({
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group ${
                   isActive
-                    ? 'bg-mali-green/15 border border-mali-green/30 text-mali-green shadow-lg shadow-mali-green/5'
-                    : 'text-surface-300 hover:bg-surface-800/60 hover:text-white border border-transparent'
+                    ? 'bg-mali-green/15 border border-mali-green/30 text-mali-green shadow-sm'
+                    : isDark
+                    ? 'text-surface-300 hover:bg-surface-800/60 hover:text-white border border-transparent'
+                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
                 }`}
               >
                 <div
                   className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 ${
                     isActive
-                      ? 'bg-mali-green/20'
-                      : 'bg-surface-700/40 group-hover:bg-surface-600/40'
+                      ? 'bg-mali-green/20 text-mali-green'
+                      : isDark
+                      ? 'bg-surface-700/40 text-surface-300 group-hover:bg-surface-600/40 group-hover:text-white'
+                      : 'bg-slate-200/70 text-slate-700 group-hover:bg-slate-200 group-hover:text-slate-900'
                   }`}
                 >
                   <Icon className="w-4.5 h-4.5" />
@@ -190,7 +202,11 @@ const Sidebar = ({
                   <p className="text-sm font-semibold">{item.label}</p>
                   <p
                     className={`text-xs ${
-                      isActive ? 'text-mali-green/70' : 'text-surface-500'
+                      isActive
+                        ? 'text-mali-green/80'
+                        : isDark
+                        ? 'text-surface-500'
+                        : 'text-slate-500'
                     }`}
                   >
                     {item.description}
@@ -211,16 +227,18 @@ const Sidebar = ({
         {/* Historique des discussions */}
         {location.pathname === '/chat' && (
           <div className={`flex-1 flex flex-col min-h-0 border-t pt-4 ${
-            isDark ? 'border-surface-700/30' : 'border-surface-200/60'
+            isDark ? 'border-surface-700/30' : 'border-slate-200'
           }`}>
             <p className={`text-xs font-semibold uppercase tracking-wider px-3 mb-2 flex-shrink-0 ${
-              isDark ? 'text-surface-500' : 'text-surface-400'
+              isDark ? 'text-surface-500' : 'text-slate-500'
             }`}>
               Historique
             </p>
             <div className="flex-1 overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
               {conversations.length === 0 ? (
-                <p className="text-xs text-surface-500 px-3 py-2 italic">
+                <p className={`text-xs px-3 py-2 italic ${
+                  isDark ? 'text-surface-500' : 'text-slate-400'
+                }`}>
                   Aucun historique
                 </p>
               ) : (
@@ -231,8 +249,12 @@ const Sidebar = ({
                       key={conv.id}
                       className={`group w-full flex items-center justify-between rounded-xl px-3 py-2 transition-all duration-200 border ${
                         isConvActive
-                          ? 'bg-surface-800/80 border-surface-700/50 text-white shadow-sm'
-                          : 'border-transparent text-surface-400 hover:bg-surface-800/40 hover:text-white'
+                          ? isDark
+                            ? 'bg-surface-800/90 border-surface-700 text-white shadow-sm'
+                            : 'bg-slate-100 border-slate-300 text-slate-900 font-semibold shadow-sm'
+                          : isDark
+                          ? 'border-transparent text-surface-400 hover:bg-surface-800/40 hover:text-white'
+                          : 'border-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                       }`}
                     >
                       <button
@@ -240,14 +262,16 @@ const Sidebar = ({
                           setActiveConversationId(conv.id);
                           if (onClose) onClose();
                         }}
-                        className="flex-1 flex items-center gap-2.5 min-w-0 text-left"
+                        className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
                       >
-                        <MessageSquare
-                          className={`w-4 h-4 flex-shrink-0 ${
-                            isConvActive ? 'text-mali-green' : 'text-surface-500'
-                          }`}
-                        />
-                        <span className="text-sm font-medium truncate flex-1">
+                        <MessageSquare className={`w-4 h-4 flex-shrink-0 ${
+                          isConvActive
+                            ? 'text-mali-green'
+                            : isDark
+                            ? 'text-surface-500'
+                            : 'text-slate-500'
+                        }`} />
+                        <span className="text-xs sm:text-sm truncate flex-1">
                           {conv.title}
                         </span>
                       </button>
@@ -260,7 +284,7 @@ const Sidebar = ({
                         className="w-7 h-7 rounded-lg hover:bg-mali-red/10 flex items-center justify-center transition-all duration-200 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                         title="Supprimer"
                       >
-                        <Trash2 className="w-3.5 h-3.5 text-surface-500 hover:text-mali-red" />
+                        <Trash2 className="w-3.5 h-3.5 text-surface-400 hover:text-mali-red" />
                       </button>
                     </div>
                   );

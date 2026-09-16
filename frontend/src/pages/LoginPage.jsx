@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Scale, Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { authAPI } from '../services/api';
+import ThemeToggle from '../components/ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
 
 const LoginPage = ({ onLogin }) => {
@@ -64,20 +65,25 @@ const LoginPage = ({ onLogin }) => {
   };
 
   return (
-    <div className={`min-h-screen flex transition-colors duration-300 ${
-      isDark ? 'bg-surface-950' : 'bg-slate-100'
+    <div className={`min-h-screen flex transition-colors duration-300 relative ${
+      isDark ? 'bg-surface-950 text-white' : 'bg-slate-50 text-slate-900'
     }`}>
+      {/* Theme Toggle top-right */}
+      <div className="absolute top-4 right-4 z-30">
+        <ThemeToggle />
+      </div>
+
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Background Gradient */}
         <div className="absolute inset-0 gradient-mali-subtle"></div>
         <div className={`absolute inset-0 ${
-          isDark ? 'bg-surface-950/60' : 'bg-white/40'
+          isDark ? 'bg-surface-950/60' : 'bg-slate-900/10'
         }`}></div>
 
         {/* Decorative Circles */}
-        <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-mali-green/5 blur-3xl"></div>
-        <div className="absolute bottom-32 right-16 w-80 h-80 rounded-full bg-mali-gold/5 blur-3xl"></div>
+        <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-mali-green/10 blur-3xl"></div>
+        <div className="absolute bottom-32 right-16 w-80 h-80 rounded-full bg-mali-gold/10 blur-3xl"></div>
 
         <div className="relative z-10 flex flex-col justify-center px-16">
           {/* Logo */}
@@ -86,18 +92,18 @@ const LoginPage = ({ onLogin }) => {
               <Scale className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 Assistant<span className="text-gradient-mali">Juridique</span>
               </h1>
-              <p className="text-surface-400 font-medium">République du Mali</p>
+              <p className={`font-medium ${isDark ? 'text-surface-400' : 'text-slate-600'}`}>République du Mali</p>
             </div>
           </div>
 
-          <h2 className="text-4xl font-bold text-white leading-tight mb-4">
+          <h2 className={`text-4xl font-bold leading-tight mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
             Le droit malien à<br />
             <span className="text-gradient-mali">portée de main</span>
           </h2>
-          <p className="text-lg text-surface-300 leading-relaxed max-w-md">
+          <p className={`text-lg leading-relaxed max-w-md ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>
             Accédez instantanément aux textes de loi du Mali grâce à notre assistant
             juridique propulsé par l'intelligence artificielle.
           </p>
@@ -119,14 +125,16 @@ const LoginPage = ({ onLogin }) => {
             <div className="w-12 h-12 rounded-xl gradient-mali flex items-center justify-center shadow-lg">
               <Scale className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Assistant<span className="text-gradient-mali">Juridique</span>
             </h1>
           </div>
 
           <div className="text-center lg:text-left mb-8">
-            <h2 className="text-2xl font-bold text-white mb-2">Bon retour !</h2>
-            <p className="text-surface-400">
+            <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Bon retour !
+            </h2>
+            <p className={`${isDark ? 'text-surface-400' : 'text-slate-600'}`}>
               Connectez-vous pour accéder à l'assistant juridique.
             </p>
           </div>
@@ -141,11 +149,11 @@ const LoginPage = ({ onLogin }) => {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>
                 Adresse email
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-500" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-400" />
                 <input
                   id="login-email"
                   type="email"
@@ -153,18 +161,20 @@ const LoginPage = ({ onLogin }) => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="votre@email.com"
                   required
-                  className="input-field pl-11"
+                  className={`input-field pl-11 ${
+                    isDark ? 'bg-surface-900/90 text-white' : 'bg-white text-slate-900 border-slate-300'
+                  }`}
                 />
               </div>
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-surface-300 mb-2">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-surface-300' : 'text-slate-700'}`}>
                 Mot de passe
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-500" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-surface-400" />
                 <input
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
@@ -172,12 +182,16 @@ const LoginPage = ({ onLogin }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="input-field pl-11 pr-11"
+                  className={`input-field pl-11 pr-11 ${
+                    isDark ? 'bg-surface-900/90 text-white' : 'bg-white text-slate-900 border-slate-300'
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-300 transition-colors"
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${
+                    isDark ? 'text-surface-500 hover:text-surface-300' : 'text-slate-400 hover:text-slate-700'
+                  }`}
                 >
                   {showPassword ? (
                     <EyeOff className="w-4.5 h-4.5" />
@@ -193,7 +207,7 @@ const LoginPage = ({ onLogin }) => {
               id="login-submit"
               type="submit"
               disabled={isLoading}
-              className="btn-primary w-full flex items-center justify-center gap-2 py-3"
+              className="btn-primary w-full flex items-center justify-center gap-2 py-3 shadow-lg shadow-mali-green/20"
             >
               {isLoading ? (
                 <>

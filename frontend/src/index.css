@@ -19,10 +19,10 @@ html {
   --bg-secondary: #0f172a;
   --bg-card: rgba(30, 41, 59, 0.6);
   --bg-card-solid: #1e293b;
-  --bg-input: rgba(30, 41, 59, 0.5);
-  --bg-sidebar: rgba(15, 23, 42, 0.8);
-  --bg-header: rgba(30, 41, 59, 0.6);
-  --bg-input-area: rgba(15, 23, 42, 0.5);
+  --bg-input: rgba(30, 41, 59, 0.6);
+  --bg-sidebar: rgba(15, 23, 42, 0.85);
+  --bg-header: rgba(30, 41, 59, 0.7);
+  --bg-input-area: rgba(15, 23, 42, 0.7);
   --bg-msg-user: rgba(20, 184, 62, 0.15);
   --bg-msg-assistant: rgba(30, 41, 59, 0.6);
   --bg-btn-disabled: rgba(51, 65, 85, 0.5);
@@ -35,39 +35,39 @@ html {
 
   --border-primary: rgba(51, 65, 85, 0.5);
   --border-card: rgba(148, 163, 184, 0.1);
-  --border-input: rgba(71, 85, 105, 0.4);
+  --border-input: rgba(71, 85, 105, 0.5);
   --border-msg-user: rgba(20, 184, 62, 0.25);
 
   --shadow-glass: none;
   --glass-blur: blur(12px);
 }
 
-/* ===== Variables CSS — Mode Clair ===== */
+/* ===== Variables CSS — Mode Clair Haute Lisibilité ===== */
 html:not(.dark) {
   --bg-primary: #f8fafc;
-  --bg-secondary: #f1f5f9;
-  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
   --bg-card-solid: #ffffff;
   --bg-input: #ffffff;
-  --bg-sidebar: rgba(255, 255, 255, 0.95);
-  --bg-header: rgba(255, 255, 255, 0.9);
-  --bg-input-area: rgba(248, 250, 252, 0.95);
-  --bg-msg-user: rgba(20, 184, 62, 0.12);
+  --bg-sidebar: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.95);
+  --bg-input-area: rgba(255, 255, 255, 0.98);
+  --bg-msg-user: #14b83e;
   --bg-msg-assistant: #ffffff;
   --bg-btn-disabled: #e2e8f0;
 
   --text-primary: #0f172a;
   --text-secondary: #1e293b;
-  --text-muted: #475569;
+  --text-muted: #334155;
   --text-faint: #64748b;
   --text-disabled: #94a3b8;
 
-  --border-primary: rgba(203, 213, 225, 0.8);
-  --border-card: rgba(203, 213, 225, 0.6);
+  --border-primary: #cbd5e1;
+  --border-card: #e2e8f0;
   --border-input: #cbd5e1;
-  --border-msg-user: rgba(20, 184, 62, 0.3);
+  --border-msg-user: #109b34;
 
-  --shadow-glass: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  --shadow-glass: 0 1px 3px rgba(0,0,0,0.06), 0 4px 14px rgba(0,0,0,0.04);
   --glass-blur: blur(12px);
 }
 
@@ -107,6 +107,7 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-glass);
     transition: background 0.25s ease, border-color 0.25s ease;
   }
 
@@ -168,19 +169,26 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     border: 1px solid var(--border-card);
     color: var(--text-muted);
     box-shadow: var(--shadow-glass);
-    @apply text-left p-3 rounded-xl text-sm transition-all duration-300 group;
+    @apply text-left p-3.5 rounded-xl text-sm transition-all duration-300;
+  }
+
+  html:not(.dark) .suggestion-btn {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    color: #334155;
   }
 
   html:not(.dark) .suggestion-btn:hover {
     background: #f8fafc;
     border-color: #14B83E;
     color: #0f172a;
+    box-shadow: 0 4px 12px rgba(20, 184, 62, 0.12);
   }
 
   .dark .suggestion-btn:hover {
     background: rgba(51, 65, 85, 0.4);
     color: white;
-    border-color: rgba(20, 184, 62, 0.2);
+    border-color: rgba(20, 184, 62, 0.25);
   }
 }
 

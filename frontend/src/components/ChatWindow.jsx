@@ -360,8 +360,8 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
                     </div>
                   </div>
 
-                  {/* Sources */}
-                  {msg.sources && msg.sources.length > 0 && (
+                  {/* Sources — affichées uniquement quand le streaming est terminé pour ce message */}
+                  {msg.sources && msg.sources.length > 0 && (!isLoading || index < messages.length - 1) && (
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center gap-2 px-1">
                         <BookOpen className="w-3.5 h-3.5 text-surface-500" />

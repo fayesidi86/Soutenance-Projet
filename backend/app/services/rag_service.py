@@ -15,6 +15,50 @@ from app.models.models import DocumentChunk
 # Initialisation du client Gemini (nouveau SDK google-genai)
 client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
+# ============================================================
+# FALLBACK : Embedding local via fastembed (ultra-léger, sans GPU)
+# Utilisé automatiquement quand le quota Gemini est épuisé.
+# Modèle multilingue (français inclus), quantisé ONNX (~120 Mo).
+# Produit 384 dims, paddingé à 768 pour compatibilité avec Vector(768).
+# ============================================================
+_LOCAL_MODEL_NAME = "BAAI/bge-small-en-v1.5"  # ONNX quantisé ~23 Mo, 384-dims, sans warning
+_TARGET_DIM = 768
+_local_embed = None  # Chargé une seule fois (singleton lazy)
+
+
+def _get_local_embedder():
+    """Charge le modèle fastembed une seule fois (singleton lazy)."""
+    global _local_embed
+    if _local_embed is None:
+        try:
+            from fastembed import TextEmbedding
+            print(f"[RAG] Chargement du modèle local fastembed '{_LOCAL_MODEL_NAME}'...")
+            _local_embed = TextEmbedding(model_name=_LOCAL_MODEL_NAME)
+            print("[RAG] Modèle local fastembed chargé avec succès.")
+        except Exception as e:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    f"Impossible de charger le modèle d'embedding local : {e}. "
+                    "Installez fastembed : pip install fastembed"
+                ),
+            )
+    return _local_embed
+
+
+def _pad_to_768(vec: list) -> list:
+    """Padde ou tronque un vecteur pour obtenir exactement 768 dimensions."""
+    if len(vec) >= _TARGET_DIM:
+        return vec[:_TARGET_DIM]
+    return vec + [0.0] * (_TARGET_DIM - len(vec))
+
+
+def _embed_locally(texts: list) -> list:
+    """Génère des embeddings locaux (fallback hors-quota) via fastembed."""
+    embedder = _get_local_embedder()
+    raw = list(embedder.embed(texts))
+    return [_pad_to_768(v.tolist()) for v in raw]
+
 
 QUOTA_ERROR_MSG = (
     "Le service d'IA est temporairement indisponible : votre quota journalier "
@@ -114,7 +158,7 @@ def is_fast_greeting(query: str) -> Optional[str]:
 
 
 def generate_embedding(content: str) -> List[float]:
-    """Génère un vecteur d'embedding pour un texte donné via Gemini."""
+    """Génère un vecteur d'embedding pour un texte donné via Gemini, avec fallback local."""
     try:
         response = client.models.embed_content(
             model=settings.EMBEDDING_MODEL,
@@ -123,11 +167,10 @@ def generate_embedding(content: str) -> List[float]:
         )
         return response.embeddings[0].values
     except genai_errors.APIError as e:
-        if "quota" in str(e).lower() or "429" in str(e):
-            raise HTTPException(
-                status_code=503,
-                detail=QUOTA_ERROR_MSG,
-            )
+        err_str = str(e).lower()
+        if "quota" in err_str or "429" in err_str or "resource" in err_str:
+            print("[RAG] Quota Gemini atteint pour generate_embedding → fallback local.")
+            return _embed_locally([content])[0]
         raise HTTPException(
             status_code=503,
             detail=f"Erreur API Gemini : {str(e)}",
@@ -138,16 +181,24 @@ def generate_embeddings_batch(contents: List[str], batch_size: int = 50) -> List
     """
     Génère les embeddings pour une liste de textes par lots (batch) optimisés.
     Réduit drastiquement le nombre de requêtes API (1 requête pour 50 textes)
-    et gère le rate limiting avec retry automatique.
+    et gère le rate limiting avec fallback automatique sur le modèle local.
     """
     if not contents:
         return []
 
-    import time
     all_embeddings = []
+    use_local = False  # Bascule sur local si quota atteint
+
     for i in range(0, len(contents), batch_size):
         batch = contents[i : i + batch_size]
+
+        if use_local:
+            # Déjà basculé sur le modèle local pour ce document
+            all_embeddings.extend(_embed_locally(batch))
+            continue
+
         max_retries = 3
+        success = False
         for attempt in range(max_retries):
             try:
                 response = client.models.embed_content(
@@ -157,22 +208,30 @@ def generate_embeddings_batch(contents: List[str], batch_size: int = 50) -> List
                 )
                 batch_vectors = [emb.values for emb in response.embeddings]
                 all_embeddings.extend(batch_vectors)
+                success = True
                 break
             except genai_errors.APIError as e:
-                is_rate_limit = "quota" in str(e).lower() or "429" in str(e) or "resource" in str(e).lower()
+                err_str = str(e).lower()
+                is_rate_limit = "quota" in err_str or "429" in err_str or "resource" in err_str
                 if is_rate_limit and attempt < max_retries - 1:
                     time.sleep(2 * (attempt + 1))
                     continue
                 if is_rate_limit:
-                    raise HTTPException(
-                        status_code=503,
-                        detail=QUOTA_ERROR_MSG,
-                    )
+                    # Quota épuisé → bascule sur modèle local pour tout le reste
+                    print(f"[RAG] Quota Gemini atteint (batch {i}) → fallback local pour tous les chunks restants.")
+                    use_local = True
+                    all_embeddings.extend(_embed_locally(batch))
+                    success = True
+                    break
                 raise HTTPException(
                     status_code=503,
                     detail=f"Erreur API Gemini lors de la vectorisation : {str(e)}",
                 )
-        if i + batch_size < len(contents):
+        if not success and not use_local:
+            # Ne devrait pas arriver, mais sécurité
+            all_embeddings.extend(_embed_locally(batch))
+
+        if i + batch_size < len(contents) and not use_local:
             time.sleep(0.5)
 
     return all_embeddings

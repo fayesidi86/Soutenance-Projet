@@ -129,18 +129,6 @@ const ChatWindow = ({ activeConversationId, setActiveConversationId, triggerRefr
       onComplete: async () => {
         setIsLoading(false);
         inputRef.current?.focus();
-        // Synchronisation automatique de sécurité pour afficher la réponse sans actualisation
-        const targetId = assignedConversationId || activeConversationId;
-        if (targetId) {
-          try {
-            const resp = await chatAPI.getConversationDetail(targetId);
-            if (resp.data?.messages && resp.data.messages.length > 0) {
-              setMessages(resp.data.messages);
-            }
-          } catch (e) {
-            console.error('Erreur lors de la synchronisation des messages:', e);
-          }
-        }
       },
     });
   };
